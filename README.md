@@ -1,6 +1,16 @@
 # SPX Collar Simulator
 
-Open `index.html` in a modern browser.
+## Clone and run
+
+```bash
+git clone https://github.com/pruedi123/spx-collar-simulator.git
+cd spx-collar-simulator
+open index.html
+```
+
+The app is a self-contained HTML file. It has no build step, package installation, server, or internet requirement. On Windows or Linux, open `index.html` directly in a modern browser after cloning.
+
+## What it does
 
 The simulator illustrates a one-year European-style SPX collar for either a closely tracking S&P 500 portfolio or a different equity portfolio with an estimated beta and tracking error:
 
