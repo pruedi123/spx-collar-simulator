@@ -1,0 +1,1 @@
+# No Python dependencies. This calculator is a standalone HTML file.

@@ -1,0 +1,1479 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>One-Year SPX Collar Simulator</title>
+  <style>
+    :root {
+      --bg: #f3f5f4;
+      --surface: #fbfcfb;
+      --surface-2: #eef1ef;
+      --ink: #18201d;
+      --muted: #5d6964;
+      --faint: #87918d;
+      --line: #d7ddda;
+      --accent: #176b52;
+      --accent-2: #dcece6;
+      --danger: #a43f3f;
+      --warn: #956a17;
+      --shadow: 0 16px 44px rgba(31, 51, 43, .08);
+      --radius: 14px;
+      --font: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #111614;
+        --surface: #181f1c;
+        --surface-2: #202925;
+        --ink: #edf3f0;
+        --muted: #a9b5b0;
+        --faint: #7f8b86;
+        --line: #303b36;
+        --accent: #63c5a2;
+        --accent-2: #203e34;
+        --danger: #ed8585;
+        --warn: #d7aa55;
+        --shadow: 0 18px 52px rgba(0, 0, 0, .24);
+      }
+    }
+
+    * { box-sizing: border-box; }
+    html { min-width: 320px; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--font);
+      -webkit-font-smoothing: antialiased;
+    }
+    button, input, select { font: inherit; }
+    button { color: inherit; }
+    button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible {
+      outline: 3px solid color-mix(in srgb, var(--accent) 35%, transparent);
+      outline-offset: 2px;
+    }
+
+    .shell { max-width: 1480px; margin: 0 auto; padding: 22px; }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      min-height: 64px;
+      margin-bottom: 18px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .mark {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: var(--accent);
+      color: var(--surface);
+      display: grid;
+      place-items: center;
+      font-family: var(--mono);
+      font-weight: 760;
+      letter-spacing: -.04em;
+    }
+    .brand h1 { margin: 0; font-size: clamp(24px, 2.2vw, 30px); line-height: 1.05; letter-spacing: -.04em; }
+    .brand p { margin: 3px 0 0; color: var(--muted); font-size: 13px; }
+    .model-note { color: var(--muted); font-size: 13px; text-align: right; line-height: 1.45; }
+
+    .layout { display: grid; grid-template-columns: 292px minmax(0, 1fr); gap: 18px; align-items: start; }
+    .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+    aside { position: sticky; top: 18px; max-height: calc(100dvh - 36px); overflow: auto; padding: 18px; }
+    .control-group + .control-group { margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--line); }
+    .control-title { margin: 0 0 12px; font-size: 13px; font-weight: 740; color: var(--muted); }
+    .mode-switch { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; background: var(--surface-2); border-radius: 10px; }
+    .mode-switch button {
+      border: 0;
+      border-radius: 7px;
+      padding: 9px 5px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .mode-switch button[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 6px rgba(20, 40, 32, .08); }
+    .mode-switch button:active, .preset:active, .play:active { transform: translateY(1px); }
+    .field { display: grid; gap: 7px; margin-top: 13px; }
+    .field label, .field-head { font-size: 13px; color: var(--muted); font-weight: 650; }
+    .field-head { display: flex; justify-content: space-between; gap: 10px; }
+    .field-head output { color: var(--ink); font-family: var(--mono); }
+    select, input[type="number"], input[type="date"] {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: var(--surface);
+      color: var(--ink);
+      padding: 9px 10px;
+    }
+    input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer; }
+    .presets { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 10px; }
+    .preset {
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      padding: 8px 5px;
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 650;
+      cursor: pointer;
+    }
+    .preset:hover { border-color: var(--accent); color: var(--accent); }
+    details { border-top: 1px solid var(--line); margin-top: 20px; padding-top: 16px; }
+    summary { cursor: pointer; color: var(--muted); font-size: 13px; font-weight: 700; }
+    .assumption-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+    .assumption-grid .field { margin: 0; }
+    .assumption-grid input { font-family: var(--mono); font-size: 12px; }
+    .fine-print { margin: 12px 0 0; color: var(--faint); font-size: 12px; line-height: 1.55; }
+    .field-help { margin: -2px 0 0; color: var(--faint); font-size: 12px; line-height: 1.45; }
+    .notice {
+      padding: 13px 16px;
+      border: 1px solid color-mix(in srgb, var(--warn) 38%, var(--line));
+      border-radius: var(--radius);
+      background: color-mix(in srgb, var(--warn) 8%, var(--surface));
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+      box-shadow: none;
+    }
+    .notice strong { color: var(--ink); }
+    .input-error { color: var(--danger); font-size: 12px; line-height: 1.4; }
+    .quote-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .quote-grid .field { min-width: 0; }
+
+    main { min-width: 0; display: grid; gap: 18px; }
+    .hero { padding: 24px 26px 20px; min-height: 176px; display: grid; grid-template-columns: minmax(310px, 1.25fr) 1fr; gap: 28px; }
+    .hero-label { margin: 0 0 8px; color: var(--muted); font-size: 13px; font-weight: 700; }
+    .hero-value { margin: 0; font-size: clamp(38px, 5vw, 64px); letter-spacing: -.055em; line-height: .98; font-variant-numeric: tabular-nums; }
+    .hero-change { margin: 12px 0 0; display: flex; align-items: baseline; gap: 9px; font-size: 14px; color: var(--muted); }
+    .hero-change strong { font-family: var(--mono); color: var(--accent); }
+    .hero-change strong.negative { color: var(--danger); }
+    .contract { align-self: end; display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
+    .contract div { padding: 12px 0; border-bottom: 1px solid var(--line); }
+    .contract span { display: block; color: var(--muted); font-size: 12px; margin-bottom: 4px; }
+    .contract strong { font-family: var(--mono); font-size: 14px; font-weight: 700; }
+    .contract strong.warning { color: var(--warn); }
+
+    .chart-panel { padding: 0; overflow: hidden; }
+    .chart-head { display: flex; justify-content: space-between; gap: 18px; padding: 20px 24px 0; }
+    .chart-head h2 { margin: 0; font-size: 24px; letter-spacing: -.035em; line-height: 1.1; }
+    .chart-head p { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
+    .legend { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 14px; align-items: center; color: var(--muted); font-size: 12px; }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .swatch { width: 18px; height: 3px; border-radius: 3px; background: var(--accent); }
+    .swatch.unhedged { background: var(--faint); }
+    .swatch.floor { height: 1px; background: var(--danger); border-top: 1px dashed var(--danger); }
+    .chart-wrap { position: relative; height: 390px; padding: 8px 10px 0; }
+    canvas { display: block; width: 100%; height: 100%; }
+    #pathChart { cursor: crosshair; }
+    .timeline { display: grid; grid-template-columns: auto minmax(100px, 1fr) auto; align-items: center; gap: 12px; padding: 10px 24px 20px; }
+    .play {
+      width: 36px;
+      height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: var(--surface);
+      cursor: pointer;
+      font-weight: 800;
+    }
+    .time-label { min-width: 82px; text-align: right; color: var(--muted); font-family: var(--mono); font-size: 12px; }
+
+    .metrics { display: grid; grid-template-columns: 1.1fr 1fr 1fr 1fr; }
+    .metric { padding: 18px 20px; min-width: 0; }
+    .metric + .metric { border-left: 1px solid var(--line); }
+    .metric span { display: block; color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+    .metric strong { font-size: 18px; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+    .metric small { display: block; color: var(--faint); font-size: 12px; line-height: 1.45; margin-top: 6px; }
+
+    .upside-panel { min-width: 0; padding: 22px 24px; overflow: hidden; }
+    .upside-head h3 { margin: 0; font-size: 20px; letter-spacing: -.025em; }
+    .upside-head p { margin: 5px 0 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+    .tradeoff-grid { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 18px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+    .tradeoff-stat { min-width: 0; padding: 16px 17px; background: var(--surface-2); }
+    .tradeoff-stat + .tradeoff-stat { border-left: 1px solid var(--line); }
+    .tradeoff-stat span { display: block; color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+    .tradeoff-stat strong { display: block; font-size: 20px; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+    .tradeoff-stat small { display: block; min-height: 2.8em; margin-top: 5px; color: var(--faint); font-size: 12px; line-height: 1.4; }
+    .rally-table-wrap { width: 100%; max-width: 100%; min-width: 0; margin-top: 18px; overflow-x: auto; }
+    .rally-table { width: 100%; min-width: 620px; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+    .rally-table caption { padding: 0 0 9px; text-align: left; color: var(--muted); font-weight: 700; }
+    .rally-table th, .rally-table td { padding: 10px 12px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+    .rally-table th:first-child, .rally-table td:first-child { text-align: left; }
+    .rally-table th { color: var(--muted); font-size: 12px; font-weight: 700; }
+    .rally-table tbody tr:last-child td { border-bottom: 0; }
+    .rally-table td:last-child { color: var(--danger); font-weight: 750; }
+    .rally-table tbody tr.selected td { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+
+    .secondary-grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: 18px; }
+    .secondary { padding: 20px 22px; min-height: 275px; }
+    .secondary h3 { margin: 0 0 5px; font-size: 18px; letter-spacing: -.02em; }
+    .secondary .sub { margin: 0 0 14px; color: var(--muted); font-size: 12px; }
+    .mini-chart { height: 200px; }
+    .outcomes { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 18px; margin-top: 20px; }
+    .outcome span { display: block; color: var(--muted); font-size: 12px; }
+    .outcome strong { display: block; margin-top: 6px; font-size: 18px; font-variant-numeric: tabular-nums; }
+    .outcome.wide { grid-column: 1 / -1; }
+    .explain { padding: 18px 22px; }
+    .explain summary { color: var(--ink); font-size: 14px; }
+    .explain p { color: var(--muted); font-size: 14px; line-height: 1.65; max-width: 90ch; }
+    .explain a { color: var(--accent); text-underline-offset: 3px; }
+    .disclosure { color: var(--faint); font-size: 12px; line-height: 1.6; padding: 0 4px 14px; }
+    .disclosure-actions { display: flex; justify-content: flex-end; padding: 0 4px 6px; }
+    .disclosure-button {
+      border: 1px solid var(--accent);
+      border-radius: 9px;
+      padding: 10px 14px;
+      background: var(--accent);
+      color: var(--surface);
+      font-size: 13px;
+      font-weight: 750;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .disclosure-button:hover { filter: brightness(.96); }
+    .disclosure-button:active { transform: translateY(1px); }
+    .method-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 28px; margin-top: 14px; }
+    .method-grid p { margin: 0; }
+    .hidden { display: none !important; }
+
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+      aside { position: static; max-height: none; overflow: visible; }
+      .controls-body { display: grid; grid-template-columns: 1fr 1fr; gap: 0 22px; }
+      details { grid-column: 1 / -1; }
+      .hero { grid-template-columns: 1fr; }
+      .contract { align-self: auto; }
+      .secondary-grid { grid-template-columns: 1fr; }
+      .method-grid { grid-template-columns: 1fr; }
+      .tradeoff-grid { grid-template-columns: 1fr 1fr; }
+      .tradeoff-stat:nth-child(3) { border-left: 0; border-top: 1px solid var(--line); }
+      .tradeoff-stat:nth-child(4) { border-top: 1px solid var(--line); }
+    }
+    @media (max-width: 680px) {
+      .shell { padding: 12px; }
+      header { align-items: flex-start; }
+      .model-note { display: none; }
+      .controls-body { grid-template-columns: 1fr; }
+      .hero { padding: 20px; gap: 18px; }
+      .hero-value { font-size: 40px; }
+      .chart-head { display: block; }
+      .legend { justify-content: flex-start; margin-top: 10px; }
+      .chart-wrap { height: 315px; }
+      .metrics { grid-template-columns: 1fr 1fr; }
+      .metric:nth-child(3) { border-left: 0; border-top: 1px solid var(--line); }
+      .metric:nth-child(4) { border-top: 1px solid var(--line); }
+      .contract { grid-template-columns: 1fr 1fr; }
+      .secondary { min-height: auto; }
+    }
+    @media (max-width: 430px) {
+      .metrics, .contract, .outcomes, .assumption-grid, .quote-grid, .tradeoff-grid { grid-template-columns: 1fr; }
+      .metric + .metric { border-left: 0; border-top: 1px solid var(--line); }
+      .tradeoff-stat + .tradeoff-stat { border-left: 0; border-top: 1px solid var(--line); }
+      .outcome.wide { grid-column: auto; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="brand">
+        <div class="mark" aria-hidden="true">90/110</div>
+        <div>
+          <h1>One-Year SPX Collar</h1>
+          <p>Static one-year SPX hedge with whole-contract sizing</p>
+        </div>
+      </div>
+      <div class="model-note" id="modelNote">Illustrative valuation model<br>Not a live option quote</div>
+    </header>
+
+    <div class="layout">
+      <aside class="panel" aria-label="Simulation controls">
+        <div class="controls-body">
+          <section class="control-group">
+            <p class="control-title">Choose a view</p>
+            <div class="mode-switch" role="tablist" aria-label="Simulation mode">
+              <button type="button" role="tab" data-mode="scenario" aria-selected="true">Scenario</button>
+              <button type="button" role="tab" data-mode="monte">Resampling</button>
+              <button type="button" role="tab" data-mode="history">History</button>
+            </div>
+          </section>
+
+          <section class="control-group">
+            <p class="control-title">Build the collar</p>
+            <div class="field">
+              <div class="field-head"><label for="putStrike">Put floor</label><output id="putStrikeOut">90%</output></div>
+              <input id="putStrike" type="range" min="75" max="100" step="1" value="90">
+            </div>
+            <div class="field">
+              <div class="field-head"><label for="callStrike">Call ceiling</label><output id="callStrikeOut">110%</output></div>
+              <input id="callStrike" type="range" min="100" max="130" step="1" value="110">
+            </div>
+            <div class="presets" aria-label="Collar presets">
+              <button class="preset collar-preset" type="button" data-put="90" data-call="110">90 / 110</button>
+              <button class="preset collar-preset" type="button" data-put="95" data-call="110">95 / 110</button>
+              <button class="preset collar-preset" type="button" data-put="90" data-call="120">90 / 120</button>
+              <button class="preset collar-preset" type="button" data-put="85" data-call="115">85 / 115</button>
+            </div>
+          </section>
+
+          <section class="control-group">
+            <p class="control-title">Size the hedge</p>
+            <div class="field">
+              <label for="portfolioValue">Portfolio value ($MM)</label>
+              <input id="portfolioValue" type="number" min="0.1" max="1000" step="0.1" value="10.0">
+            </div>
+            <div class="field">
+              <label for="portfolioType">Portfolio relationship to SPX</label>
+              <select id="portfolioType">
+                <option value="exact" selected>Closely tracks S&amp;P 500</option>
+                <option value="proxy">Different equity portfolio</option>
+              </select>
+            </div>
+            <div class="quote-grid">
+              <div class="field">
+                <label for="portfolioBeta">Estimated beta</label>
+                <input id="portfolioBeta" type="number" min="0" max="3" step="0.05" value="1.00">
+              </div>
+              <div class="field">
+                <label for="trackingError">Tracking error (%)</label>
+                <input id="trackingError" type="number" min="0" max="30" step="0.5" value="0" aria-describedby="trackingHelp">
+              </div>
+            </div>
+            <p class="field-help" id="trackingHelp">Annualized tracking error is simulated only for a different equity portfolio.</p>
+            <div class="field">
+              <div class="field-head"><label for="hedgeCoverage">Target hedge coverage</label><output id="hedgeCoverageOut">100%</output></div>
+              <input id="hedgeCoverage" type="range" min="0" max="125" step="5" value="100">
+            </div>
+            <div class="field">
+              <label for="spxLevel">SPX level at trade date</label>
+              <input id="spxLevel" type="number" min="100" max="20000" step="100" value="6800">
+              <p class="field-help">The default is illustrative. Replace it with the level associated with the option quotes.</p>
+            </div>
+            <div class="field">
+              <label for="settlementType">Expiration settlement</label>
+              <select id="settlementType">
+                <option value="pm" selected>PM-settled SPXW</option>
+                <option value="am">AM-settled traditional SPX</option>
+              </select>
+            </div>
+            <p class="fine-print">The app rounds to whole $100-multiplier SPX contracts. A proxy portfolio retains basis risk even when its beta-adjusted notional is matched.</p>
+          </section>
+
+          <section class="control-group">
+            <p class="control-title">Set option prices</p>
+            <div class="field">
+              <label for="pricingMode">Premium source</label>
+              <select id="pricingMode">
+                <option value="model" selected>Illustrative model</option>
+                <option value="market">Entered market quotes</option>
+              </select>
+            </div>
+            <div id="marketQuoteControls" class="hidden">
+              <div class="field">
+                <label for="quoteDate">Quote as-of date</label>
+                <input id="quoteDate" type="date">
+              </div>
+              <div class="field">
+                <label for="expirationDate">Option expiration date</label>
+                <input id="expirationDate" type="date">
+              </div>
+              <div class="quote-grid">
+                <div class="field">
+                  <label for="putAsk">Put ask (index points)</label>
+                  <input id="putAsk" type="number" min="0" max="5000" step="0.05" placeholder="Required">
+                </div>
+                <div class="field">
+                  <label for="callBid">Call bid (index points)</label>
+                  <input id="callBid" type="number" min="0" max="5000" step="0.05" placeholder="Required">
+                </div>
+              </div>
+              <p class="field-help">The put ask and call bid give a conservative executable estimate. Enter quotes for the same expiration.</p>
+              <p class="input-error hidden" id="quoteError">Enter quote and expiration dates plus valid put-ask and call-bid quotes. The app is temporarily using model values.</p>
+            </div>
+          </section>
+
+          <section class="control-group mode-controls" id="scenarioControls">
+            <p class="control-title">Shape the market</p>
+            <div class="field">
+              <label for="scenarioType">Path pattern</label>
+              <select id="scenarioType">
+                <option value="steady">Steady path</option>
+                <option value="earlyDrop">Early drop, partial recovery</option>
+                <option value="lateDrop">Late decline</option>
+                <option value="vshape">V-shaped selloff</option>
+                <option value="volatile">Volatile year</option>
+              </select>
+            </div>
+            <div class="field">
+              <div class="field-head"><label for="annualReturn">Ending price return</label><output id="annualReturnOut">+8%</output></div>
+              <input id="annualReturn" type="range" min="-45" max="45" step="1" value="8">
+            </div>
+            <div class="presets" aria-label="Return presets">
+              <button class="preset" type="button" data-return="20">Rising +20%</button>
+              <button class="preset" type="button" data-return="30">Strong rally +30%</button>
+              <button class="preset" type="button" data-return="40">Surge +40%</button>
+              <button class="preset" type="button" data-return="0">Flat 0%</button>
+              <button class="preset" type="button" data-return="-20">Down -20%</button>
+              <button class="preset" type="button" data-return="-35">Crash -35%</button>
+            </div>
+          </section>
+
+          <section class="control-group mode-controls hidden" id="monteControls">
+            <p class="control-title">Set the scenario distribution</p>
+            <div class="field">
+              <div class="field-head"><label for="expectedReturn">Expected price return</label><output id="expectedReturnOut">+8%</output></div>
+              <input id="expectedReturn" type="range" min="-10" max="20" step="1" value="8">
+            </div>
+            <div class="field">
+              <div class="field-head"><label for="volScale">Historical volatility scale</label><output id="volScaleOut">100%</output></div>
+              <input id="volScale" type="range" min="70" max="140" step="5" value="100">
+            </div>
+            <div class="field">
+              <label for="samplingStyle">Historical sampling</label>
+              <select id="samplingStyle">
+                <option value="historical" selected>Historical mix</option>
+                <option value="stress">Severe-stress weighted</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="simCount">Number of paths</label>
+              <select id="simCount">
+                <option value="1000">1,000</option>
+                <option value="2500" selected>2,500</option>
+                <option value="5000">5,000</option>
+              </select>
+            </div>
+            <p class="fine-print">Ordinary Shiller price returns are converted to log returns before resampling. Severe-stress weighting deliberately selects a stress block 35% of the time at each quarterly draw, so about 82% of those one-year scenarios contain at least one stress block. Scenario frequencies are not forecasts.</p>
+          </section>
+
+          <section class="control-group mode-controls hidden" id="historyControls">
+            <p class="control-title">Replay a calendar year</p>
+            <div class="field">
+              <label for="historyYear">S&P 500 price path</label>
+              <select id="historyYear">
+                <optgroup label="Severe historical stress">
+                  <option value="gfc2008" selected>GFC: Mar 2008 to Mar 2009</option>
+                  <option value="depression1931">Depression: Jun 1931 to Jun 1932</option>
+                </optgroup>
+                <optgroup label="Recent calendar years">
+                  <option value="2018">2018: late-year selloff</option>
+                  <option value="2020">2020: crash and recovery</option>
+                  <option value="2022">2022: sustained decline</option>
+                  <option value="2023">2023: rising market</option>
+                  <option value="2025">2025: volatile rise</option>
+                </optgroup>
+              </select>
+            </div>
+            <p class="fine-print">The crisis windows use monthly-average Shiller data. Recent years use weekly FRED observations. Interpolation creates display points between observations. These are index-path replays, not historical option-chain backtests.</p>
+          </section>
+
+          <details>
+            <summary>Advanced assumptions</summary>
+            <div class="assumption-grid">
+              <div class="field">
+                <label for="riskFree">Interest rate</label>
+                <input id="riskFree" type="number" min="0" max="15" step="0.1" value="4.0">
+              </div>
+              <div class="field">
+                <label for="dividendYield">Dividend yield</label>
+                <input id="dividendYield" type="number" min="0" max="10" step="0.1" value="1.5">
+              </div>
+              <div class="field">
+                <label for="atmIv">Starting ATM volatility</label>
+                <input id="atmIv" type="number" min="1" max="80" step="0.5" value="20.0">
+              </div>
+              <div class="field">
+                <label for="putSkew">Put skew, vol points</label>
+                <input id="putSkew" type="number" min="0" max="25" step="0.5" value="4.0">
+              </div>
+              <div class="field">
+                <label for="callSkew">Call skew, vol points</label>
+                <input id="callSkew" type="number" min="-20" max="20" step="0.5" value="-2.0">
+              </div>
+            </div>
+            <p class="fine-print">These defaults are illustrative and time-sensitive. Replace them with trade-date assumptions. Model premiums use strike-specific Black-Scholes volatility. Entered market quotes imply separate starting volatilities for interim illustration.</p>
+          </details>
+        </div>
+      </aside>
+
+      <main>
+        <section class="notice" id="scopeNotice">
+          <strong>Educational scenario, not an executable recommendation.</strong>
+          The displayed protection applies to SPX exposure. Actual results depend on portfolio basis risk, available quotes, contract rounding, transaction costs, liquidity, settlement values, taxes, and decisions made before expiration.
+        </section>
+        <section class="panel hero" aria-live="polite">
+          <div>
+            <p class="hero-label" id="heroLabel">Total collared portfolio at month 0</p>
+            <p class="hero-value" id="totalValue">$10,000,000</p>
+            <p class="hero-change"><strong id="totalChange">0.00%</strong><span id="changeContext">from initial capital including collar premium</span></p>
+          </div>
+          <div class="contract" aria-label="Collar terms">
+            <div><span>Index portfolio</span><strong id="portfolioLabel">$10.00MM</strong></div>
+            <div><span>Term</span><strong>1 year</strong></div>
+            <div><span>Whole SPX contracts</span><strong id="contractCountLabel">15</strong></div>
+            <div><span>SPX hedge notional</span><strong id="hedgeNotionalLabel">$10.20MM</strong></div>
+            <div><span>Long put</span><strong id="putTermLabel">90% strike</strong></div>
+            <div><span>Short call</span><strong id="callTermLabel">110% strike</strong></div>
+          </div>
+        </section>
+
+        <section class="panel chart-panel">
+          <div class="chart-head">
+            <div>
+              <h2 id="chartTitle">Portfolio through the year</h2>
+              <p id="chartSubtitle">Move the timeline or point at the chart to inspect any day.</p>
+            </div>
+            <div class="legend" aria-label="Chart legend">
+              <span><i class="swatch"></i>Collared total</span>
+              <span id="unhedgedLegend"><i class="swatch unhedged"></i>Unhedged with dividends</span>
+              <span><i class="swatch floor"></i><b id="floorLegend" style="font-weight:inherit">$9MM reference</b></span>
+            </div>
+          </div>
+          <div class="chart-wrap"><canvas id="pathChart" aria-label="Portfolio value chart"></canvas></div>
+          <div class="timeline">
+            <button class="play" id="playButton" type="button" aria-label="Play simulation">▶</button>
+            <input id="timeline" type="range" min="0" max="252" step="1" value="0" aria-label="Day of year">
+            <output class="time-label" id="timeLabel">Month 0.0</output>
+          </div>
+        </section>
+
+        <section class="panel metrics" aria-label="Key results">
+          <div class="metric"><span>Initial net premium</span><strong id="netPremium">$0</strong><small id="premiumDetail">Put premium less call premium</small></div>
+          <div class="metric"><span>Whole-contract hedge ratio</span><strong id="hedgeRatio">102.0%</strong><small id="hedgeRatioDetail">SPX notional divided by portfolio value</small></div>
+          <div class="metric"><span>Settlement convention</span><strong id="settlementLabel">PM SPXW</strong><small id="settlementDetail">Closing-value settlement reference</small></div>
+          <div class="metric"><span id="drawdownLabel">Collared max drawdown</span><strong id="maxDrawdown">0.0%</strong><small id="drawdownDetail">Monthly path, marked to model</small></div>
+        </section>
+
+        <section class="panel upside-panel" id="upsidePanel" aria-labelledby="upsideTitle">
+          <div class="upside-head">
+            <h3 id="upsideTitle">Strong-market opportunity cost</h3>
+            <p id="upsideSub">At the selected scenario's expiration, including dividends and premium financing.</p>
+          </div>
+          <div class="tradeoff-grid">
+            <div class="tradeoff-stat"><span>Unhedged ending value</span><strong id="upsideUnhedged">$0</strong><small>Portfolio without the SPX collar</small></div>
+            <div class="tradeoff-stat"><span>Collared ending value</span><strong id="upsideCollared">$0</strong><small>Portfolio, options, dividends, and premium cash</small></div>
+            <div class="tradeoff-stat"><span>Upside given up</span><strong id="upsideGivenUp">$0</strong><small id="upsideGivenUpDetail">Unhedged value less collared value</small></div>
+            <div class="tradeoff-stat"><span>Unhedged gain retained</span><strong id="gainRetained">100%</strong><small id="gainRetainedDetail">Collared gain divided by unhedged gain</small></div>
+          </div>
+          <div class="rally-table-wrap">
+            <table class="rally-table">
+              <caption>One-year steady-rally comparison using the current collar</caption>
+              <thead><tr><th scope="col">SPX return</th><th scope="col">Unhedged value</th><th scope="col">Collared value</th><th scope="col">Upside given up</th></tr></thead>
+              <tbody>
+                <tr data-rally="0.10"><td>+10%</td><td data-col="unhedged"></td><td data-col="collared"></td><td data-col="cost"></td></tr>
+                <tr data-rally="0.20"><td>+20%</td><td data-col="unhedged"></td><td data-col="collared"></td><td data-col="cost"></td></tr>
+                <tr data-rally="0.30"><td>+30%</td><td data-col="unhedged"></td><td data-col="collared"></td><td data-col="cost"></td></tr>
+                <tr data-rally="0.40"><td>+40%</td><td data-col="unhedged"></td><td data-col="collared"></td><td data-col="cost"></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <div class="secondary-grid">
+          <section class="panel secondary">
+            <h3 id="secondaryTitle">Payoff at expiration</h3>
+            <p class="sub" id="secondarySub">Index component only, before dividends and the premium cash account.</p>
+            <div class="mini-chart"><canvas id="secondaryChart" aria-label="Terminal payoff chart"></canvas></div>
+          </section>
+          <section class="panel secondary">
+            <h3 id="outcomeTitle">At the selected date</h3>
+            <p class="sub" id="outcomeSub">The option values change before expiration even though the strikes do not.</p>
+            <div class="outcomes">
+              <div class="outcome"><span>Index price return</span><strong id="indexReturn">0.0%</strong></div>
+              <div class="outcome"><span>Unhedged total</span><strong id="unhedgedValue">$10.00MM</strong></div>
+              <div class="outcome"><span>Put value</span><strong id="putValue">$0</strong></div>
+              <div class="outcome"><span>Short call liability</span><strong id="callValue">$0</strong></div>
+              <div class="outcome"><span>Cash dividends received</span><strong id="dividendsValue">$0</strong></div>
+              <div class="outcome"><span>Premium cash account</span><strong id="premiumCashValue">$0</strong></div>
+            </div>
+          </section>
+        </div>
+
+        <details class="panel explain">
+          <summary>What the model is showing</summary>
+          <div class="method-grid">
+            <p>The app buys a one-year SPX put and sells a one-year SPX call at the selected strikes. Contract sizing uses the entered SPX level, a $100 multiplier, beta-adjusted target coverage, and whole-contract rounding.</p>
+            <p>Model premiums use Black-Scholes with separate put and call volatility assumptions. Entered market quotes override the initial premiums and imply separate starting volatilities for interim illustration. A net debit is financed and a net credit is invested at the entered interest rate. Dividends accumulate as cash.</p>
+            <p>Historical resampling uses contiguous three-month blocks of Shiller monthly S&amp;P Composite price returns. Ordinary returns are converted to log returns before recentering and compounding.</p>
+            <p>Historical replay reproduces the index path, not historical option prices. Interim option values are hypothetical marks. Expiration intrinsic value is the more reliable educational result.</p>
+            <p>The strong-market panel compares the same portfolio with and without the collar. Upside given up equals the unhedged ending value minus the collared ending value, after dividends and premium financing. It is not simply the call's intrinsic value.</p>
+          </div>
+        </details>
+
+        <details class="panel explain">
+          <summary>Data sources, contract mechanics, and alternatives</summary>
+          <div class="method-grid">
+            <p><a href="https://www.cboe.com/tradable-products/sp-500/spx-options/spx-specifications" target="_blank" rel="noreferrer">Cboe SPX specifications</a> describe the $100 multiplier, European exercise, cash settlement, and expiration conventions. Traditional AM-settled SPX and PM-settled SPXW can use different official settlement references.</p>
+            <p><a href="https://www.theocc.com/company-information/documents-and-archives/options-disclosure-document" target="_blank" rel="noreferrer">OCC's options disclosure</a> explains index-option risks, including the risk that a securities portfolio will not move exactly with the index used for the hedge.</p>
+            <p>Long-run monthly S&amp;P Composite price levels are derived from Robert Shiller's public market dataset. Recent replay observations are sampled from the Federal Reserve Bank of St. Louis FRED S&amp;P 500 series. Embedded data are static through 2025.</p>
+            <p>This app models one static one-year collar. Cboe collar benchmarks also use rolling structures, including quarterly puts with monthly calls and three-month puts with three-month calls. Those alternatives can have materially different cost, liquidity, and reset behavior.</p>
+          </div>
+        </details>
+
+        <p class="disclosure">Educational illustration only. This is a hypothetical static one-year SPX collar, not an executable quote, forecast, recommendation, or assurance of a portfolio floor. Entered quotes are not validated against an exchange. The model excludes commissions, exchange fees, market impact, liquidity constraints, counterparty and clearing risk, taxes, accounting treatment, collateral and margin requirements, and management decisions before expiration. SPX options are cash settled, so settlement timing and the official settlement value can differ from the portfolio's value. Historical observations and simulated scenario frequencies do not predict future results.</p>
+        <div class="disclosure-actions">
+          <button class="disclosure-button" id="disclosurePdfButton" type="button">Disclosure PDF</button>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    "use strict";
+
+    const DAYS = 252;
+    const START_INDEX = 100;
+    const CONTRACT_MULTIPLIER = 100;
+    const historyData = {
+      gfc2008: [1316.94,1370.47,1403.22,1341.25,1257.33,1281.47,1216.95,968.80,883.04,877.56,865.58,805.23,757.13],
+      depression1931: [13.87,14.33,13.90,11.83,10.25,10.39,8.44,8.30,8.23,8.26,6.28,5.51,4.77],
+      2018: [2695.81,2751.29,2802.56,2837.54,2823.81,2681.66,2698.63,2703.96,2677.67,2738.97,2747.33,2643.69,2640.87,2604.47,2656.3,2670.14,2669.91,2663.42,2727.72,2712.97,2721.33,2746.87,2782,2773.75,2717.07,2726.71,2793.84,2809.55,2820.4,2816.29,2858.45,2839.96,2862.96,2897.52,2888.6,2888.92,2907.95,2905.97,2925.51,2785.68,2809.21,2656.1,2711.74,2813.89,2701.58,2649.93,2737.76,2633.08,2599.95,2416.62,2506.85],
+      2020: [3257.85,3274.7,3316.81,3295.47,3225.52,3327.71,3380.16,3225.89,3090.23,2746.56,2386.13,2237.4,2626.65,2663.68,2846.06,2736.56,2863.39,2868.44,2870.12,2922.94,3036.13,3122.87,3190.14,3113.49,3050.33,3115.86,3152.05,3215.57,3235.66,3246.22,3349.16,3373.43,3385.51,3484.55,3455.06,3340.97,3319.47,3298.46,3348.44,3477.13,3483.81,3465.39,3269.96,3509.44,3585.15,3557.54,3621.63,3691.96,3647.49,3694.92,3727.04,3756.07],
+      2022: [4796.56,4670.29,4577.11,4356.45,4546.54,4521.54,4471.07,4225.5,4386.54,4277.88,4357.86,4456.24,4602.45,4481.15,4446.59,4393.66,4287.5,4146.87,3930.08,3900.79,4057.84,4108.54,3900.86,3674.84,3900.11,3831.39,3818.8,3936.69,3921.05,4091.19,4122.47,4305.2,4128.73,3986.16,3979.87,3946.01,3789.93,3719.04,3783.28,3577.03,3695.16,3830.6,3759.69,3748.57,3958.79,4027.26,4076.57,3963.51,3895.75,3822.39,3839.5],
+      2023: [3824.14,3919.25,3928.86,4016.22,4119.21,4117.86,4147.6,4012.32,3981.35,3918.32,3960.28,3948.72,4050.83,4105.02,4137.64,4133.52,4169.48,4136.25,4124.08,4191.98,4205.45,4273.79,4338.93,4388.71,4378.41,4446.82,4472.16,4565.72,4566.75,4513.39,4467.71,4404.33,4436.01,4514.87,4451.14,4505.1,4330,4299.7,4258.19,4349.61,4278,4137.23,4317.78,4347.35,4508.24,4559.34,4594.63,4604.37,4719.19,4754.63,4769.83],
+      2025: [5868.55,5827.04,5996.66,6012.28,5994.57,6066.44,6129.58,5955.25,5778.15,5572.07,5614.66,5776.65,5633.07,4982.77,5396.63,5375.86,5569.06,5631.28,5892.58,5844.61,5912.17,5939.3,6045.26,5967.84,6173.07,6229.98,6268.56,6305.6,6389.77,6329.94,6373.45,6449.15,6439.32,6415.54,6512.61,6606.76,6656.92,6688.46,6714.59,6644.31,6735.35,6890.89,6771.55,6846.61,6617.32,6765.88,6849.72,6886.68,6721.43,6932.05,6845.5]
+    };
+
+    const historyLabels = {
+      gfc2008: "GFC, Mar 2008 to Mar 2009",
+      depression1931: "Great Depression proxy, Jun 1931 to Jun 1932",
+      2018: "2018 calendar year",
+      2020: "2020 calendar year",
+      2022: "2022 calendar year",
+      2023: "2023 calendar year",
+      2025: "2025 calendar year"
+    };
+
+    // Monthly nominal S&P Composite price returns derived from Robert Shiller's
+    // January 1871 through December 2025 index levels, packed as signed basis points.
+    const shillerPacked = "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";
+
+    function decodeShillerReturns() {
+      const raw = atob(shillerPacked);
+      const out = [];
+      for (let i = 0; i < raw.length; i += 2) {
+        let value = raw.charCodeAt(i) | (raw.charCodeAt(i + 1) << 8);
+        if (value & 0x8000) value -= 0x10000;
+        out.push(value / 10000);
+      }
+      return out;
+    }
+
+    const shillerReturns = decodeShillerReturns();
+    const shillerLogReturns = shillerReturns.map(value => Math.log1p(value));
+    const shillerMean = shillerLogReturns.reduce((sum, value) => sum + value, 0) / shillerLogReturns.length;
+    const shillerStressStarts = [];
+    for (let i = 0; i < shillerLogReturns.length - 3; i++) {
+      const threeMonth = Math.exp(shillerLogReturns[i] + shillerLogReturns[i + 1] + shillerLogReturns[i + 2]) - 1;
+      if (shillerReturns[i] < -0.08 || threeMonth < -0.12) shillerStressStarts.push(i);
+    }
+
+    const state = {
+      mode: "scenario",
+      day: 0,
+      path: [],
+      result: null,
+      monte: null,
+      rallyComparisons: [],
+      playing: false,
+      animation: 0
+    };
+
+    const $ = id => document.getElementById(id);
+    const money0 = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+    const moneyMM = value => `${value < 0 ? "-" : ""}$${Math.abs(value / 1e6).toFixed(2)}MM`;
+    const pct = (value, digits = 1) => `${value >= 0 ? "+" : ""}${(value * 100).toFixed(digits)}%`;
+    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+    function inputs() {
+      const portfolio = Number($("portfolioValue").value) * 1e6;
+      const exactPortfolio = $("portfolioType").value === "exact";
+      const beta = exactPortfolio ? 1 : Number($("portfolioBeta").value);
+      const trackingError = exactPortfolio ? 0 : Number($("trackingError").value) / 100;
+      const coverage = Number($("hedgeCoverage").value) / 100;
+      const spxLevel = Number($("spxLevel").value);
+      const targetNotional = portfolio * beta * coverage;
+      const contracts = Math.max(0, Math.round(targetNotional / (spxLevel * CONTRACT_MULTIPLIER)));
+      const hedgeNotional = contracts * spxLevel * CONTRACT_MULTIPLIER;
+      return {
+        portfolio,
+        exactPortfolio,
+        beta,
+        trackingError,
+        coverage,
+        spxLevel,
+        contracts,
+        hedgeNotional,
+        pricingMode: $("pricingMode").value,
+        quoteDate: $("quoteDate").value,
+        expirationDate: $("expirationDate").value,
+        putAsk: Number($("putAsk").value),
+        callBid: Number($("callBid").value),
+        r: Number($("riskFree").value) / 100,
+        q: Number($("dividendYield").value) / 100,
+        iv: Number($("atmIv").value) / 100,
+        putSkew: Number($("putSkew").value) / 100,
+        callSkew: Number($("callSkew").value) / 100,
+        volScale: Number($("volScale").value) / 100,
+        expectedReturn: Number($("expectedReturn").value) / 100,
+        annualReturn: Number($("annualReturn").value) / 100,
+        putStrike: Number($("putStrike").value),
+        callStrike: Number($("callStrike").value)
+      };
+    }
+
+    function normalCdf(x) {
+      const t = 1 / (1 + 0.2316419 * Math.abs(x));
+      const d = 0.3989422804014327 * Math.exp(-x * x / 2);
+      let p = 1 - d * t * (0.319381530 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
+      return x >= 0 ? p : 1 - p;
+    }
+
+    function bsPrice(type, S, K, T, r, q, sigma) {
+      if (T <= 1e-9) return type === "call" ? Math.max(S - K, 0) : Math.max(K - S, 0);
+      const vol = Math.max(sigma, 1e-6);
+      const rootT = Math.sqrt(T);
+      const d1 = (Math.log(S / K) + (r - q + 0.5 * vol * vol) * T) / (vol * rootT);
+      const d2 = d1 - vol * rootT;
+      if (type === "call") return S * Math.exp(-q * T) * normalCdf(d1) - K * Math.exp(-r * T) * normalCdf(d2);
+      return K * Math.exp(-r * T) * normalCdf(-d2) - S * Math.exp(-q * T) * normalCdf(-d1);
+    }
+
+    function impliedVol(type, price, S, K, T, r, q) {
+      if (!Number.isFinite(price) || price <= 0) return NaN;
+      const lowPrice = bsPrice(type, S, K, T, r, q, .0001);
+      const highPrice = bsPrice(type, S, K, T, r, q, 3);
+      if (price < lowPrice - 1e-6 || price > highPrice + 1e-6) return NaN;
+      let lo = .0001, hi = 3;
+      for (let i = 0; i < 80; i++) {
+        const mid = (lo + hi) / 2;
+        if (bsPrice(type, S, K, T, r, q, mid) < price) lo = mid;
+        else hi = mid;
+      }
+      return (lo + hi) / 2;
+    }
+
+    function optionTerms(p) {
+      const units = p.hedgeNotional / START_INDEX;
+      const modelPutSigma = clamp(p.iv + p.putSkew, .01, 1.5);
+      const modelCallSigma = clamp(p.iv + p.callSkew, .01, 1.5);
+      const modelTerms = {
+        units,
+        validQuotes: false,
+        putSigma: modelPutSigma,
+        callSigma: modelCallSigma,
+        put0: bsPrice("put", START_INDEX, p.putStrike, 1, p.r, p.q, modelPutSigma) * units,
+        call0: bsPrice("call", START_INDEX, p.callStrike, 1, p.r, p.q, modelCallSigma) * units
+      };
+      const quotesPresent = p.pricingMode === "market" && Boolean(p.quoteDate) && Boolean(p.expirationDate) && p.putAsk > 0 && p.callBid > 0 && p.contracts > 0;
+      if (!quotesPresent) return modelTerms;
+      const put0 = p.putAsk * CONTRACT_MULTIPLIER * p.contracts;
+      const call0 = p.callBid * CONTRACT_MULTIPLIER * p.contracts;
+      const putNormalized = p.putAsk / p.spxLevel * START_INDEX;
+      const callNormalized = p.callBid / p.spxLevel * START_INDEX;
+      const putSigma = impliedVol("put", putNormalized, START_INDEX, p.putStrike, 1, p.r, p.q);
+      const callSigma = impliedVol("call", callNormalized, START_INDEX, p.callStrike, 1, p.r, p.q);
+      if (!Number.isFinite(putSigma) || !Number.isFinite(callSigma)) return modelTerms;
+      return {
+        units,
+        validQuotes: true,
+        put0,
+        call0,
+        putSigma,
+        callSigma
+      };
+    }
+
+    function seededRandom(seed) {
+      let s = seed >>> 0;
+      return () => {
+        s = (s + 0x6D2B79F5) >>> 0;
+        let t = s;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    function gaussian(rand) {
+      const u = Math.max(rand(), 1e-12);
+      const v = rand();
+      return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+    }
+
+    function interpolateAnchors(anchors) {
+      const path = new Array(DAYS + 1);
+      for (let a = 0; a < anchors.length - 1; a++) {
+        const [x0, y0] = anchors[a];
+        const [x1, y1] = anchors[a + 1];
+        const d0 = Math.round(x0 * DAYS);
+        const d1 = Math.round(x1 * DAYS);
+        for (let d = d0; d <= d1; d++) {
+          const t = d1 === d0 ? 0 : (d - d0) / (d1 - d0);
+          const smooth = t * t * (3 - 2 * t);
+          path[d] = y0 * Math.pow(y1 / y0, smooth);
+        }
+      }
+      return path;
+    }
+
+    function scenarioPath() {
+      const end = START_INDEX * (1 + inputs().annualReturn);
+      const type = $("scenarioType").value;
+      if (type === "steady") return Array.from({ length: DAYS + 1 }, (_, d) => START_INDEX * Math.pow(end / START_INDEX, d / DAYS));
+      if (type === "earlyDrop") return interpolateAnchors([[0,100],[.22,76],[.52,89],[1,end]]);
+      if (type === "lateDrop") return interpolateAnchors([[0,100],[.62,115],[.82,108],[1,end]]);
+      if (type === "vshape") return interpolateAnchors([[0,100],[.32,72],[.68,103],[1,end]]);
+      const rand = seededRandom(8128);
+      const raw = [0];
+      let walk = 0;
+      for (let d = 1; d <= DAYS; d++) {
+        walk += gaussian(rand) * 0.012;
+        raw.push(walk);
+      }
+      const finalWalk = raw[DAYS];
+      return raw.map((v, d) => START_INDEX * Math.exp(Math.log(end / START_INDEX) * d / DAYS + v - finalWalk * d / DAYS));
+    }
+
+    function expandHistory(values) {
+      const base = values[0];
+      return Array.from({ length: DAYS + 1 }, (_, d) => {
+        const pos = d / DAYS * (values.length - 1);
+        const i = Math.floor(pos);
+        const f = pos - i;
+        const val = i >= values.length - 1 ? values.at(-1) : values[i] * (1 - f) + values[i + 1] * f;
+        return START_INDEX * val / base;
+      });
+    }
+
+    function derivedIvPath(indexPath) {
+      const p = inputs();
+      const path = [p.iv];
+      let peak = indexPath[0];
+      for (let d = 1; d <= DAYS; d++) {
+        peak = Math.max(peak, indexPath[d]);
+        const start = Math.max(1, d - 21);
+        const returns = [];
+        for (let j = start; j <= d; j++) returns.push(Math.log(indexPath[j] / indexPath[j - 1]));
+        const mean = returns.reduce((sum, value) => sum + value, 0) / returns.length;
+        const variance = returns.length > 1 ? returns.reduce((sum, value) => sum + (value - mean) ** 2, 0) / (returns.length - 1) : returns[0] ** 2;
+        const realized = Math.sqrt(Math.max(0, variance) * DAYS);
+        const drawdown = Math.max(0, 1 - indexPath[d] / peak);
+        const dailyShock = Math.max(0, -returns.at(-1));
+        const target = clamp(.45 * p.iv + .35 * realized + .65 * drawdown + 1.5 * dailyShock, .08, .90);
+        path.push(clamp(.88 * path.at(-1) + .12 * target, .08, .90));
+      }
+      return path;
+    }
+
+    function deterministicPortfolioPath(indexPath, p) {
+      return indexPath.map(S => p.portfolio * Math.pow(Math.max(S / START_INDEX, .01), p.beta));
+    }
+
+    function valuePath(indexPath, ivPath = null, portfolioPath = null) {
+      const p = inputs();
+      const terms = optionTerms(p);
+      const units = terms.units;
+      const put0 = terms.put0;
+      const call0 = terms.call0;
+      const net = put0 - call0;
+      const holdings = portfolioPath || deterministicPortfolioPath(indexPath, p);
+      let dividends = 0;
+      const rows = [];
+      for (let d = 0; d <= DAYS; d++) {
+        const S = indexPath[d];
+        const stock = holdings[d];
+        if (d > 0) dividends += holdings[d - 1] * p.q / DAYS;
+        const T = Math.max(0, 1 - d / DAYS);
+        const atmIv = ivPath ? ivPath[d] : p.iv;
+        const putOtm = Math.max(0, 1 - p.putStrike / S);
+        const callOtm = Math.max(0, p.callStrike / S - 1);
+        const initialPutOtm = Math.max(0, 1 - p.putStrike / START_INDEX);
+        const initialCallOtm = Math.max(0, p.callStrike / START_INDEX - 1);
+        const putSkewNow = initialPutOtm > 1e-6 ? p.putSkew * putOtm / initialPutOtm : p.putSkew;
+        const callSkewNow = initialCallOtm > 1e-6 ? p.callSkew * callOtm / initialCallOtm : p.callSkew;
+        const putIv = clamp(terms.putSigma + (atmIv - p.iv) + (putSkewNow - p.putSkew), .01, 1.5);
+        const callIv = clamp(terms.callSigma + (atmIv - p.iv) + (callSkewNow - p.callSkew), .01, 1.5);
+        const put = bsPrice("put", S, p.putStrike, T, p.r, p.q, putIv) * units;
+        const call = bsPrice("call", S, p.callStrike, T, p.r, p.q, callIv) * units;
+        const premiumCash = -net * Math.exp(p.r * d / DAYS);
+        rows.push({ day: d, S, stock, dividends, put, call, premiumCash, atmIv, putIv, callIv, total: stock + dividends + put - call + premiumCash, unhedged: stock + dividends });
+      }
+      return { rows, put0, call0, net, initial: rows[0].total, terms };
+    }
+
+    function monteCarlo() {
+      const p = inputs();
+      const count = Number($("simCount").value);
+      const samplingStyle = $("samplingStyle").value;
+      const rand = seededRandom(4001 + count + Math.round(p.volScale * 1000) + Math.round(p.expectedReturn * 1000) + Math.round(p.beta * 100) + Math.round(p.trackingError * 1000) + (samplingStyle === "stress" ? 7919 : 0));
+      const totalsByDay = Array.from({ length: DAYS + 1 }, () => []);
+      const indexByDay = Array.from({ length: DAYS + 1 }, () => []);
+      const ivByDay = Array.from({ length: DAYS + 1 }, () => []);
+      const portfolioByDay = Array.from({ length: DAYS + 1 }, () => []);
+      const terminal = [];
+      const drawdowns = [];
+      let representative = null;
+      const targetMonthly = Math.log(Math.max(.05, 1 + p.expectedReturn)) / 12;
+      for (let n = 0; n < count; n++) {
+        const monthlyIndex = [START_INDEX];
+        const monthlyPortfolio = [p.portfolio];
+        const monthlyIv = [p.iv];
+        const sampledReturns = [];
+        let blockStart = 0;
+        for (let month = 0; month < 12; month++) {
+          if (month % 3 === 0) {
+            const useStress = samplingStyle === "stress" && rand() < .35;
+            const source = useStress ? shillerStressStarts : null;
+            blockStart = source ? source[Math.floor(rand() * source.length)] : Math.floor(rand() * (shillerLogReturns.length - 3));
+          }
+          const historical = shillerLogReturns[blockStart + month % 3];
+          const monthlyReturn = targetMonthly + (historical - shillerMean) * p.volScale;
+          sampledReturns.push(monthlyReturn);
+          monthlyIndex.push(monthlyIndex.at(-1) * Math.exp(monthlyReturn));
+          const trackingShock = p.trackingError > 0 ? gaussian(rand) * p.trackingError / Math.sqrt(12) : 0;
+          monthlyPortfolio.push(monthlyPortfolio.at(-1) * Math.exp(p.beta * monthlyReturn + trackingShock));
+          const recent = sampledReturns.slice(-3);
+          const mean = recent.reduce((sum, value) => sum + value, 0) / recent.length;
+          const variance = recent.length > 1 ? recent.reduce((sum, value) => sum + (value - mean) ** 2, 0) / (recent.length - 1) : recent[0] ** 2;
+          const realized = Math.sqrt(variance * 12);
+          const shockBoost = Math.max(0, -monthlyReturn) * 1.25;
+          const targetIv = clamp(.55 * p.iv + .45 * realized + shockBoost, .08, .80);
+          monthlyIv.push(clamp(.65 * monthlyIv.at(-1) + .35 * targetIv, .08, .80));
+        }
+        const path = [], ivPath = [], portfolioPath = [];
+        for (let d = 0; d <= DAYS; d++) {
+          const pos = d / DAYS * 12;
+          const m = Math.min(11, Math.floor(pos));
+          const f = d === DAYS ? 1 : pos - m;
+          path.push(Math.exp(Math.log(monthlyIndex[m]) * (1 - f) + Math.log(monthlyIndex[m + 1]) * f));
+          ivPath.push(monthlyIv[m] * (1 - f) + monthlyIv[m + 1] * f);
+          portfolioPath.push(Math.exp(Math.log(monthlyPortfolio[m]) * (1 - f) + Math.log(monthlyPortfolio[m + 1]) * f));
+        }
+        const valued = valuePath(path, ivPath, portfolioPath);
+        for (let d = 0; d <= DAYS; d++) {
+          totalsByDay[d].push(valued.rows[d].total);
+          indexByDay[d].push(path[d]);
+          ivByDay[d].push(ivPath[d]);
+          portfolioByDay[d].push(portfolioPath[d]);
+        }
+        terminal.push(valued.rows[DAYS].total);
+        drawdowns.push(maxDrawdown(valued.rows.map(row => row.total)));
+        if (n === 0) representative = valued;
+      }
+      const qs = [0.05, 0.25, 0.5, 0.75, 0.95];
+      const bands = qs.map(() => []);
+      const indexMedian = [];
+      const ivMedian = [];
+      const portfolioMedian = [];
+      for (let d = 0; d <= DAYS; d++) {
+        totalsByDay[d].sort((a,b) => a-b);
+        indexByDay[d].sort((a,b) => a-b);
+        ivByDay[d].sort((a,b) => a-b);
+        portfolioByDay[d].sort((a,b) => a-b);
+        qs.forEach((q, i) => bands[i].push(quantileSorted(totalsByDay[d], q)));
+        indexMedian.push(quantileSorted(indexByDay[d], .5));
+        ivMedian.push(quantileSorted(ivByDay[d], .5));
+        portfolioMedian.push(quantileSorted(portfolioByDay[d], .5));
+      }
+      terminal.sort((a,b) => a-b);
+      drawdowns.sort((a,b) => a-b);
+      return { bands, terminal, drawdowns, indexMedian, ivMedian, portfolioMedian, representative };
+    }
+
+    function quantileSorted(arr, q) {
+      const pos = (arr.length - 1) * q;
+      const lo = Math.floor(pos), hi = Math.ceil(pos), f = pos - lo;
+      return arr[lo] * (1 - f) + arr[hi] * f;
+    }
+
+    function maxDrawdown(values) {
+      let peak = values[0], worst = 0;
+      for (const v of values) {
+        peak = Math.max(peak, v);
+        worst = Math.min(worst, v / peak - 1);
+      }
+      return worst;
+    }
+
+    function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+    function setupCanvas(canvas) {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(rect.width * dpr);
+      canvas.height = Math.round(rect.height * dpr);
+      const ctx = canvas.getContext("2d");
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      return { ctx, width: rect.width, height: rect.height };
+    }
+
+    function niceBounds(series, floorReference) {
+      const vals = series.flat().filter(Number.isFinite);
+      if (floorReference) vals.push(floorReference);
+      let lo = Math.min(...vals), hi = Math.max(...vals);
+      const pad = Math.max((hi - lo) * .12, 150000);
+      lo -= pad; hi += pad;
+      const step = hi - lo > 8e6 ? 2e6 : hi - lo > 4e6 ? 1e6 : .5e6;
+      return [Math.floor(lo / step) * step, Math.ceil(hi / step) * step, step];
+    }
+
+    function putStrikeReference(p) {
+      return p.portfolio * Math.pow(Math.max(p.putStrike / START_INDEX, .01), p.beta);
+    }
+
+    function drawPathChart() {
+      const canvas = $("pathChart");
+      const { ctx, width, height } = setupCanvas(canvas);
+      const pad = { l: 58, r: 22, t: 18, b: 34 };
+      const w = width - pad.l - pad.r, h = height - pad.t - pad.b;
+      const accent = css("--accent"), faint = css("--faint"), line = css("--line"), muted = css("--muted"), danger = css("--danger"), surface = css("--surface");
+      let series, bounds;
+
+      if (state.mode === "monte") {
+        const b = state.monte.bands;
+        series = [b[0], b[1], b[2], b[3], b[4]];
+        bounds = niceBounds(series, putStrikeReference(inputs()));
+      } else {
+        const rows = state.result.rows;
+        series = [rows.map(r => r.total), rows.map(r => r.unhedged)];
+        bounds = niceBounds(series, putStrikeReference(inputs()));
+      }
+      const [yMin, yMax, yStep] = bounds;
+      const x = d => pad.l + w * d / DAYS;
+      const y = v => pad.t + h * (1 - (v - yMin) / (yMax - yMin));
+
+      ctx.clearRect(0, 0, width, height);
+      ctx.font = "11px " + css("--mono");
+      ctx.textBaseline = "middle";
+      ctx.strokeStyle = line;
+      ctx.fillStyle = muted;
+      ctx.lineWidth = 1;
+      for (let v = yMin; v <= yMax + 1; v += yStep) {
+        const yy = y(v);
+        ctx.beginPath(); ctx.moveTo(pad.l, yy); ctx.lineTo(width - pad.r, yy); ctx.stroke();
+        ctx.textAlign = "right"; ctx.fillText(`$${(v / 1e6).toFixed(v % 1e6 ? 1 : 0)}M`, pad.l - 9, yy);
+      }
+      ctx.textAlign = "center";
+      [0, 63, 126, 189, 252].forEach(d => ctx.fillText(d === 0 ? "Start" : `M${Math.round(d / 21)}`, x(d), height - 13));
+
+      const strikeReference = putStrikeReference(inputs());
+      ctx.save(); ctx.setLineDash([5, 5]); ctx.strokeStyle = danger; ctx.globalAlpha = .65; ctx.beginPath(); ctx.moveTo(pad.l, y(strikeReference)); ctx.lineTo(width - pad.r, y(strikeReference)); ctx.stroke(); ctx.restore();
+
+      if (state.mode === "monte") {
+        const b = state.monte.bands;
+        fillBand(ctx, b[0], b[4], x, y, accent, .10);
+        fillBand(ctx, b[1], b[3], x, y, accent, .18);
+        drawLine(ctx, b[2], x, y, accent, 2.5);
+      } else {
+        drawLine(ctx, series[1], x, y, faint, 1.6);
+        drawLine(ctx, series[0], x, y, accent, 2.8);
+      }
+
+      const d = state.day;
+      ctx.save();
+      ctx.strokeStyle = muted; ctx.globalAlpha = .65; ctx.beginPath(); ctx.moveTo(x(d), pad.t); ctx.lineTo(x(d), pad.t + h); ctx.stroke();
+      const value = state.mode === "monte" ? state.monte.bands[2][d] : state.result.rows[d].total;
+      ctx.fillStyle = surface; ctx.strokeStyle = accent; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(x(d), y(value), 4.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawLine(ctx, values, x, y, color, width) {
+      ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = width; ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.beginPath();
+      values.forEach((v, i) => i ? ctx.lineTo(x(i), y(v)) : ctx.moveTo(x(i), y(v)));
+      ctx.stroke(); ctx.restore();
+    }
+
+    function fillBand(ctx, lower, upper, x, y, color, alpha) {
+      ctx.save(); ctx.fillStyle = color; ctx.globalAlpha = alpha; ctx.beginPath();
+      upper.forEach((v, i) => i ? ctx.lineTo(x(i), y(v)) : ctx.moveTo(x(i), y(v)));
+      for (let i = lower.length - 1; i >= 0; i--) ctx.lineTo(x(i), y(lower[i]));
+      ctx.closePath(); ctx.fill(); ctx.restore();
+    }
+
+    function drawSecondary() {
+      if (state.mode === "monte") drawHistogram(); else drawPayoff();
+    }
+
+    function drawPayoff() {
+      const canvas = $("secondaryChart");
+      const { ctx, width, height } = setupCanvas(canvas);
+      const pad = { l: 50, r: 14, t: 12, b: 28 };
+      const w = width - pad.l - pad.r, h = height - pad.t - pad.b;
+      const p = inputs(), units = p.hedgeNotional / START_INDEX;
+      const returns = Array.from({ length: 81 }, (_, i) => -.5 + i * .0125);
+      const unhedged = returns.map(ret => p.portfolio * Math.pow(Math.max(1 + ret, .01), p.beta));
+      const collared = returns.map((ret, i) => unhedged[i] + units * Math.max(p.putStrike - START_INDEX * (1 + ret), 0) - units * Math.max(START_INDEX * (1 + ret) - p.callStrike, 0));
+      const allValues = collared.concat(unhedged);
+      const yMin = Math.min(...allValues) * .94;
+      const yMax = Math.max(...allValues) * 1.06;
+      const x = i => pad.l + w * i / (returns.length - 1);
+      const y = v => pad.t + h * (1 - (v - yMin) / (yMax - yMin));
+      ctx.clearRect(0,0,width,height); ctx.font = "10px " + css("--mono"); ctx.fillStyle = css("--muted"); ctx.strokeStyle = css("--line");
+      for (const v of [p.portfolio * p.putStrike / 100, p.portfolio, p.portfolio * p.callStrike / 100]) {
+        ctx.beginPath(); ctx.moveTo(pad.l, y(v)); ctx.lineTo(width - pad.r, y(v)); ctx.stroke(); ctx.textAlign = "right"; ctx.fillText(`$${(v/1e6).toFixed(0)}M`, pad.l - 7, y(v)+3);
+      }
+      [-.5,-.25,0,.25,.5].forEach(ret => { const i = Math.round((ret + .5) / .0125); ctx.textAlign="center"; ctx.fillText(`${ret>=0?"+":""}${Math.round(ret*100)}%`, x(i), height-7); });
+      const gapStart = returns.findIndex((ret, i) => unhedged[i] - collared[i] > 1);
+      if (gapStart >= 0) {
+        ctx.save();
+        ctx.fillStyle = css("--danger");
+        ctx.globalAlpha = .11;
+        ctx.beginPath();
+        for (let i = gapStart; i < returns.length; i++) i === gapStart ? ctx.moveTo(x(i), y(unhedged[i])) : ctx.lineTo(x(i), y(unhedged[i]));
+        for (let i = returns.length - 1; i >= gapStart; i--) ctx.lineTo(x(i), y(collared[i]));
+        ctx.closePath(); ctx.fill();
+        ctx.globalAlpha = .9; ctx.fillStyle = css("--danger"); ctx.font = "11px " + css("--font"); ctx.textAlign = "center";
+        const labelIndex = Math.min(returns.length - 5, gapStart + Math.max(5, Math.round((returns.length - gapStart) * .56)));
+        ctx.fillText("Upside given up", x(labelIndex), (y(unhedged[labelIndex]) + y(collared[labelIndex])) / 2);
+        ctx.restore();
+      }
+      drawLine(ctx, unhedged, x, y, css("--faint"), 1.4); drawLine(ctx, collared, x, y, css("--accent"), 2.5);
+    }
+
+    function drawHistogram() {
+      const canvas = $("secondaryChart");
+      const { ctx, width, height } = setupCanvas(canvas);
+      const values = state.monte.terminal;
+      const pad = { l: 46, r: 12, t: 10, b: 28 }, w = width-pad.l-pad.r, h=height-pad.t-pad.b;
+      const min = values[0], max = values.at(-1), bins = 26, counts = Array(bins).fill(0);
+      values.forEach(v => counts[Math.min(bins-1, Math.floor((v-min)/(max-min||1)*bins))]++);
+      const peak = Math.max(...counts);
+      ctx.clearRect(0,0,width,height); ctx.font="10px "+css("--mono"); ctx.strokeStyle=css("--line"); ctx.fillStyle=css("--muted");
+      ctx.beginPath(); ctx.moveTo(pad.l,pad.t+h); ctx.lineTo(width-pad.r,pad.t+h); ctx.stroke();
+      counts.forEach((c,i) => { const bh=h*c/peak; const bw=w/bins-2; ctx.fillStyle=css("--accent"); ctx.globalAlpha=.72; ctx.fillRect(pad.l+i*w/bins+1,pad.t+h-bh,bw,bh); });
+      ctx.globalAlpha=1; ctx.fillStyle=css("--muted");
+      [min,(min+max)/2,max].forEach((v,i) => { ctx.textAlign=i===0?"left":i===2?"right":"center"; ctx.fillText(moneyMM(v), pad.l+i*w/2, height-7); });
+    }
+
+    function rallyComparison(marketReturn) {
+      const end = START_INDEX * (1 + marketReturn);
+      const path = Array.from({ length: DAYS + 1 }, (_, d) => START_INDEX * Math.pow(end / START_INDEX, d / DAYS));
+      const valued = valuePath(path, derivedIvPath(path));
+      const terminal = valued.rows[DAYS];
+      return {
+        marketReturn,
+        unhedged: terminal.unhedged,
+        collared: terminal.total,
+        opportunityCost: Math.max(0, terminal.unhedged - terminal.total)
+      };
+    }
+
+    function updateUpsidePanel() {
+      const panel = $("upsidePanel");
+      panel.classList.toggle("hidden", state.mode !== "scenario");
+      if (state.mode !== "scenario") return;
+      const p = inputs();
+      const terminal = state.result.rows[DAYS];
+      const marketReturn = terminal.S / START_INDEX - 1;
+      const rawGap = terminal.unhedged - terminal.total;
+      const opportunityCost = Math.max(0, rawGap);
+      const unhedgedGain = terminal.unhedged - p.portfolio;
+      const collaredGain = terminal.total - p.portfolio;
+      const retained = unhedgedGain > 0 ? collaredGain / unhedgedGain : NaN;
+      $("upsideSub").textContent = `At a ${pct(marketReturn)} SPX ending return, including dividends and premium financing.`;
+      $("upsideUnhedged").textContent = moneyMM(terminal.unhedged);
+      $("upsideCollared").textContent = moneyMM(terminal.total);
+      $("upsideGivenUp").textContent = moneyMM(opportunityCost);
+      $("upsideGivenUpDetail").textContent = rawGap > 0 ? "Unhedged ending value less collared ending value" : `No opportunity cost here; collar is ahead by ${moneyMM(Math.abs(rawGap))}`;
+      $("gainRetained").textContent = Number.isFinite(retained) ? `${(retained * 100).toFixed(1)}%` : "N/A";
+      $("gainRetainedDetail").textContent = Number.isFinite(retained) ? "Collared gain divided by unhedged gain" : "The unhedged portfolio has no positive gain";
+      document.querySelectorAll("[data-rally]").forEach(row => {
+        const comparison = state.rallyComparisons.find(item => item.marketReturn === Number(row.dataset.rally));
+        if (!comparison) return;
+        row.classList.toggle("selected", Math.abs(marketReturn - comparison.marketReturn) < .005);
+        row.querySelector('[data-col="unhedged"]').textContent = moneyMM(comparison.unhedged);
+        row.querySelector('[data-col="collared"]').textContent = moneyMM(comparison.collared);
+        row.querySelector('[data-col="cost"]').textContent = comparison.opportunityCost > 0 ? moneyMM(comparison.opportunityCost) : "$0";
+      });
+    }
+
+    function updateHeroAndDetails() {
+      const p = inputs();
+      const d = state.day;
+      let total, initial, row, drawdownValues;
+      if (state.mode === "monte") {
+        total = state.monte.bands[2][d];
+        initial = state.monte.bands[2][0];
+        const representative = valuePath(state.monte.indexMedian, state.monte.ivMedian, state.monte.portfolioMedian);
+        row = representative.rows[d];
+        row.total = total;
+        drawdownValues = state.monte.bands[2];
+      } else {
+        row = state.result.rows[d];
+        total = row.total;
+        initial = state.result.initial;
+        drawdownValues = state.result.rows.map(r => r.total);
+      }
+      const change = total / initial - 1;
+      $("heroLabel").textContent = state.mode === "monte" ? `Median collared portfolio at month ${(d/21).toFixed(1)}` : `Total collared portfolio at month ${(d/21).toFixed(1)}`;
+      $("totalValue").textContent = money0.format(total);
+      $("totalChange").textContent = pct(change, 2);
+      $("totalChange").classList.toggle("negative", change < 0);
+      $("portfolioLabel").textContent = moneyMM(p.portfolio);
+      $("portfolioLabel").previousElementSibling.textContent = p.exactPortfolio ? "S&P 500 portfolio" : "Proxy equity portfolio";
+      $("contractCountLabel").textContent = p.contracts.toLocaleString("en-US");
+      $("hedgeNotionalLabel").textContent = moneyMM(p.hedgeNotional);
+      $("putTermLabel").textContent = `${p.putStrike}% / ${(p.spxLevel * p.putStrike / 100).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+      $("callTermLabel").textContent = `${p.callStrike}% / ${(p.spxLevel * p.callStrike / 100).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+      $("floorLegend").textContent = `${moneyMM(p.portfolio * Math.pow(p.putStrike / START_INDEX, p.beta))} at put strike`;
+      $("timeLabel").textContent = `Month ${(d/21).toFixed(1)}`;
+      $("timeline").value = d;
+
+      const baseResult = state.mode === "monte" ? state.monte.representative : state.result;
+      const premiumCashFlow = -baseResult.net;
+      $("netPremium").textContent = `${premiumCashFlow >= 0 ? "+" : "-"}${money0.format(Math.abs(premiumCashFlow))} ${premiumCashFlow >= 0 ? "credit" : "debit"}`;
+      const sourceLabel = baseResult.terms.validQuotes ? `entered put ask and call bid as of ${p.quoteDate}, expiring ${p.expirationDate}` : "illustrative model values";
+      $("premiumDetail").textContent = `${baseResult.net >= 0 ? "Put cost exceeds call premium" : "Call premium exceeds put cost"}; ${sourceLabel}`;
+      $("quoteError").classList.toggle("hidden", p.pricingMode !== "market" || baseResult.terms.validQuotes);
+      $("modelNote").innerHTML = baseResult.terms.validQuotes ? "Entered market quotes<br>Interim values remain modeled" : "Illustrative valuation model<br>Not a live option quote";
+      const hedgeRatio = p.portfolio > 0 ? p.hedgeNotional / p.portfolio : 0;
+      $("hedgeRatio").textContent = `${(hedgeRatio * 100).toFixed(1)}%`;
+      $("hedgeRatioDetail").textContent = p.exactPortfolio ? "SPX notional divided by portfolio value" : `Target reflects beta ${p.beta.toFixed(2)} and ${(p.coverage * 100).toFixed(0)}% coverage`;
+      const pmSettlement = $("settlementType").value === "pm";
+      $("settlementLabel").textContent = pmSettlement ? "PM SPXW" : "AM SPX";
+      $("settlementDetail").textContent = pmSettlement ? "Closing-value settlement reference" : "Opening-derived settlement can differ from the prior close";
+      if (state.mode === "monte") {
+        $("drawdownLabel").textContent = "Scenario median max drawdown";
+        $("drawdownDetail").textContent = "Across resampled monthly scenarios";
+        $("maxDrawdown").textContent = pct(quantileSorted(state.monte.drawdowns, .5));
+      } else {
+        $("drawdownLabel").textContent = "Collared max drawdown";
+        $("drawdownDetail").textContent = state.mode === "history" ? "Interpolated path with hypothetical option marks" : "Illustrative path with hypothetical option marks";
+        $("maxDrawdown").textContent = pct(maxDrawdown(drawdownValues));
+      }
+      $("indexReturn").textContent = pct(row.S / START_INDEX - 1);
+      $("unhedgedValue").textContent = moneyMM(row.unhedged);
+      $("putValue").textContent = money0.format(row.put);
+      $("callValue").textContent = money0.format(row.call);
+      $("dividendsValue").textContent = money0.format(row.dividends);
+      $("premiumCashValue").textContent = money0.format(row.premiumCash);
+
+      if (state.mode === "monte") {
+        const terminal = state.monte.terminal;
+        const lossThreshold = initial;
+        const belowStart = terminal.filter(v => v < lossThreshold).length / terminal.length;
+        $("outcomeTitle").textContent = "Resampling summary";
+        $("outcomeSub").textContent = "The selected date uses the median simulated path.";
+        $("indexReturn").previousElementSibling.textContent = "Median index price return";
+        $("unhedgedValue").previousElementSibling.textContent = "Median unhedged total";
+        $("putValue").previousElementSibling.textContent = "5th percentile ending value";
+        $("putValue").textContent = moneyMM(quantileSorted(terminal, .05));
+        $("callValue").previousElementSibling.textContent = "Median ending value";
+        $("callValue").textContent = moneyMM(quantileSorted(terminal, .5));
+        $("dividendsValue").previousElementSibling.textContent = "Scenario share below initial capital";
+        $("dividendsValue").textContent = `${(belowStart*100).toFixed(1)}%`;
+        $("premiumCashValue").previousElementSibling.textContent = "95th percentile ending value";
+        $("premiumCashValue").textContent = moneyMM(quantileSorted(terminal, .95));
+      } else {
+        $("outcomeTitle").textContent = "At the selected date";
+        $("outcomeSub").textContent = "The option values change before expiration even though the strikes do not.";
+        $("indexReturn").previousElementSibling.textContent = "Index price return";
+        $("unhedgedValue").previousElementSibling.textContent = "Unhedged total";
+        $("putValue").previousElementSibling.textContent = "Put value";
+        $("callValue").previousElementSibling.textContent = "Short call liability";
+        $("dividendsValue").previousElementSibling.textContent = "Cash dividends received";
+        $("premiumCashValue").previousElementSibling.textContent = "Premium cash account";
+        $("premiumCashValue").textContent = money0.format(row.premiumCash);
+      }
+      updateUpsidePanel();
+    }
+
+    function recalculate(resetDay = false) {
+      if (resetDay) state.day = 0;
+      if (state.mode === "scenario") state.path = scenarioPath();
+      if (state.mode === "history") state.path = expandHistory(historyData[$("historyYear").value]);
+      if (state.mode === "monte") {
+        state.monte = monteCarlo();
+        state.result = state.monte.representative;
+        $("chartTitle").textContent = "Range of resampled scenarios";
+        $("chartSubtitle").textContent = `Shiller three-month blocks with ${$("samplingStyle").value === "stress" ? "deliberate severe-stress weighting" : "equal historical sampling"}. Bands are scenario percentiles, not forecast confidence intervals.`;
+        $("secondaryTitle").textContent = "Scenario ending values";
+        $("secondarySub").textContent = "Frequency within this scenario set, not a forecast probability distribution.";
+        $("unhedgedLegend").classList.add("hidden");
+      } else {
+        state.result = valuePath(state.path, derivedIvPath(state.path));
+        $("chartTitle").textContent = state.mode === "history" ? `Historical replay: ${historyLabels[$("historyYear").value]}` : "Portfolio through the year";
+        $("chartSubtitle").textContent = state.mode === "history" ? "Index path replay with interpolated observations and hypothetical option marks." : "Illustrative market path with dynamic, hypothetical option marks.";
+        $("secondaryTitle").textContent = "Payoff at expiration";
+        $("secondarySub").textContent = "Portfolio plus SPX option payoff, before dividends and the premium cash account.";
+        $("unhedgedLegend").classList.remove("hidden");
+      }
+      state.rallyComparisons = state.mode === "scenario" ? [.10, .20, .30, .40].map(rallyComparison) : [];
+      updateHeroAndDetails(); drawPathChart(); drawSecondary();
+    }
+
+    function setMode(mode) {
+      state.mode = mode;
+      document.querySelectorAll("[data-mode]").forEach(b => b.setAttribute("aria-selected", b.dataset.mode === mode ? "true" : "false"));
+      $("scenarioControls").classList.toggle("hidden", mode !== "scenario");
+      $("monteControls").classList.toggle("hidden", mode !== "monte");
+      $("historyControls").classList.toggle("hidden", mode !== "history");
+      stopPlaying(); recalculate(true);
+    }
+
+    function stopPlaying() {
+      state.playing = false;
+      cancelAnimationFrame(state.animation);
+      $("playButton").textContent = "▶";
+      $("playButton").setAttribute("aria-label", "Play simulation");
+    }
+
+    function togglePlay() {
+      if (state.playing) return stopPlaying();
+      if (state.day >= DAYS) state.day = 0;
+      state.playing = true;
+      $("playButton").textContent = "Ⅱ";
+      $("playButton").setAttribute("aria-label", "Pause simulation");
+      let last = performance.now();
+      const tick = now => {
+        if (!state.playing) return;
+        if (now - last > 28) {
+          state.day = Math.min(DAYS, state.day + 2);
+          updateHeroAndDetails(); drawPathChart(); last = now;
+          if (state.day >= DAYS) return stopPlaying();
+        }
+        state.animation = requestAnimationFrame(tick);
+      };
+      state.animation = requestAnimationFrame(tick);
+    }
+
+    function openDisclosurePdf() {
+      const popup = window.open("", "_blank");
+      if (!popup) {
+        alert("The disclosure window was blocked. Allow popups for this file and try again.");
+        return;
+      }
+      popup.opener = null;
+      const generated = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+      popup.document.write(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SPX Collar Simulator Educational Disclosure</title>
+  <style>
+    @page { size: letter; margin: .68in .72in; }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: #18201d; background: #f3f5f4; font-family: Arial, Helvetica, sans-serif; font-size: 10.5pt; line-height: 1.52; }
+    .page { width: min(8.5in, 100%); margin: 0 auto; padding: 42px 48px; background: #fbfcfb; }
+    header { padding-bottom: 18px; border-bottom: 2px solid #176b52; }
+    h1 { margin: 0; font-size: 21pt; line-height: 1.12; letter-spacing: -.02em; }
+    .subtitle { margin: 7px 0 0; color: #5d6964; font-size: 10pt; }
+    main { padding-top: 18px; }
+    p { margin: 0 0 12px; }
+    .summary { margin-top: 20px; padding: 15px 17px; border-left: 4px solid #176b52; background: #eef4f1; font-weight: 700; }
+    .instruction { margin: 18px 0 0; color: #5d6964; font-size: 9pt; }
+    .actions { position: sticky; top: 0; display: flex; justify-content: flex-end; padding: 12px; background: #f3f5f4; }
+    button { border: 0; border-radius: 7px; padding: 10px 14px; background: #176b52; color: #fbfcfb; font: 700 14px Arial, sans-serif; cursor: pointer; }
+    footer { margin-top: 22px; padding-top: 12px; border-top: 1px solid #d7ddda; color: #5d6964; font-size: 8.5pt; }
+    @media print {
+      body { background: #fbfcfb; }
+      .actions, .instruction { display: none; }
+      .page { width: auto; margin: 0; padding: 0; }
+    }
+    @media (max-width: 650px) { .page { padding: 28px 22px; } }
+  </style>
+</head>
+<body>
+  <div class="actions"><button type="button" onclick="window.print()">Save as PDF</button></div>
+  <article class="page">
+    <header>
+      <h1>One-Year SPX Collar Simulator</h1>
+      <p class="subtitle">Educational disclosure | Prepared ${generated}</p>
+    </header>
+    <main>
+      <p>This simulator is an educational tool, not a trading recommendation or an executable hedge proposal. Its purpose is to show the basic economics of a one-year SPX collar: what protection we might gain, how much upside we surrender, and how the results change under different market paths.</p>
+      <p>The expiration payoff is the strongest part of the model. If the entered option quotes, portfolio exposure, contract count, and settlement assumptions are accurate, the expiration illustration should be directionally reliable.</p>
+      <p>The model has several important limitations. It does not connect to a live option chain or verify that entered prices are executable. Bid-ask spreads, commissions, liquidity, taxes, collateral, accounting treatment, and implementation decisions could materially change the result.</p>
+      <p>The illustrated protection applies directly to S&amp;P 500 exposure. If the company's portfolio differs from the S&amp;P 500, the hedge introduces basis risk. The portfolio and the SPX options may not move together, so the displayed protection should not be interpreted as a guaranteed floor.</p>
+      <p>Values shown before expiration are hypothetical model estimates. Actual option values will respond to changes in implied volatility, interest rates, dividends, liquidity, and the volatility surface. The historical examples replay the index path, but they are not historical option-chain backtests.</p>
+      <p>The resampling section is a scenario generator, not a forecast. Its percentages describe outcomes within the selected historical sampling method. They are not predictions of what is likely to happen next year.</p>
+      <p>Finally, this demonstrates one static one-year collar. It does not establish that this is the best structure. A real implementation should compare different strikes, maturities, rolling schedules, hedge percentages, and possibly other instruments using current market quotes.</p>
+      <p>I view this as a tool for framing the decision and identifying the right questions. Before executing anything, we would need current quotes, an analysis of the actual portfolio, and review by qualified investment, legal, tax, accounting, and risk professionals.</p>
+      <p class="summary">In other words: Trust the payoff mechanics more than the probability estimates, and treat the modeled interim values as illustrations rather than prices. The tool helps us understand the tradeoff, but it does not replace actual portfolio analysis or an executable hedge proposal.</p>
+      <p class="instruction">Select Save as PDF, then choose your browser's PDF destination.</p>
+    </main>
+    <footer>For educational discussion only. This document accompanies the One-Year SPX Collar Simulator.</footer>
+  </article>
+</body>
+</html>`);
+      popup.document.close();
+    }
+
+    document.querySelectorAll("[data-mode]").forEach(b => b.addEventListener("click", () => setMode(b.dataset.mode)));
+    $("disclosurePdfButton").addEventListener("click", openDisclosurePdf);
+    document.querySelectorAll("[data-return]").forEach(b => b.addEventListener("click", () => { $("annualReturn").value = b.dataset.return; $("annualReturnOut").textContent = `${Number(b.dataset.return)>=0?"+":""}${b.dataset.return}%`; recalculate(true); }));
+    document.querySelectorAll(".collar-preset").forEach(b => b.addEventListener("click", () => {
+      $("putStrike").value = b.dataset.put;
+      $("callStrike").value = b.dataset.call;
+      $("putStrikeOut").textContent = `${b.dataset.put}%`;
+      $("callStrikeOut").textContent = `${b.dataset.call}%`;
+      recalculate();
+    }));
+    $("putStrike").addEventListener("input", e => { $("putStrikeOut").textContent = `${e.target.value}%`; });
+    $("putStrike").addEventListener("change", () => recalculate());
+    $("callStrike").addEventListener("input", e => { $("callStrikeOut").textContent = `${e.target.value}%`; });
+    $("callStrike").addEventListener("change", () => recalculate());
+    $("annualReturn").addEventListener("input", e => { $("annualReturnOut").textContent = `${Number(e.target.value)>=0?"+":""}${e.target.value}%`; recalculate(); });
+    $("expectedReturn").addEventListener("input", e => { $("expectedReturnOut").textContent = `${Number(e.target.value)>=0?"+":""}${e.target.value}%`; });
+    $("expectedReturn").addEventListener("change", () => recalculate());
+    $("volScale").addEventListener("input", e => { $("volScaleOut").textContent = `${e.target.value}%`; });
+    $("volScale").addEventListener("change", () => recalculate());
+    $("samplingStyle").addEventListener("change", () => recalculate());
+    $("scenarioType").addEventListener("change", () => recalculate(true));
+    $("historyYear").addEventListener("change", () => recalculate(true));
+    $("simCount").addEventListener("change", () => recalculate());
+    $("hedgeCoverage").addEventListener("input", e => { $("hedgeCoverageOut").textContent = `${e.target.value}%`; });
+    $("hedgeCoverage").addEventListener("change", () => recalculate());
+    function syncPortfolioType() {
+      const exact = $("portfolioType").value === "exact";
+      $("portfolioBeta").disabled = exact;
+      $("trackingError").disabled = exact;
+      if (exact) {
+        $("portfolioBeta").value = "1.00";
+        $("trackingError").value = "0";
+      }
+    }
+    $("portfolioType").addEventListener("change", () => { syncPortfolioType(); recalculate(); });
+    $("pricingMode").addEventListener("change", () => {
+      $("marketQuoteControls").classList.toggle("hidden", $("pricingMode").value !== "market");
+      recalculate();
+    });
+    ["riskFree","dividendYield","atmIv","putSkew","callSkew","portfolioValue","portfolioBeta","trackingError","spxLevel","settlementType","putAsk","callBid","quoteDate","expirationDate"].forEach(id => $(id).addEventListener("change", () => recalculate()));
+    $("timeline").addEventListener("input", e => { stopPlaying(); state.day = Number(e.target.value); updateHeroAndDetails(); drawPathChart(); });
+    $("playButton").addEventListener("click", togglePlay);
+    $("pathChart").addEventListener("pointermove", e => {
+      if (e.buttons) e.preventDefault();
+      const rect = e.currentTarget.getBoundingClientRect();
+      state.day = clamp(Math.round((e.clientX - rect.left - 58) / Math.max(1, rect.width - 80) * DAYS), 0, DAYS);
+      updateHeroAndDetails(); drawPathChart();
+    });
+    let resizeTimer;
+    window.addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { drawPathChart(); drawSecondary(); }, 120); });
+    const themeQuery = matchMedia("(prefers-color-scheme: dark)");
+    themeQuery.addEventListener?.("change", () => { drawPathChart(); drawSecondary(); });
+
+    const today = new Date();
+    const oneYearLater = new Date(today);
+    oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
+    $("quoteDate").value = today.toISOString().slice(0, 10);
+    $("expirationDate").value = oneYearLater.toISOString().slice(0, 10);
+    syncPortfolioType();
+
+    const requestedMode = new URLSearchParams(location.search).get("mode");
+    if (["scenario", "monte", "history"].includes(requestedMode)) setMode(requestedMode);
+    else recalculate(true);
+  </script>
+</body>
+</html>
