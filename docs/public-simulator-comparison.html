@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Public Collar Simulator Comparison</title>
+  <style>
+    @page { size: Letter; margin: 0.52in 0.58in 0.5in; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: #18222d;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      font-size: 9.4pt;
+      line-height: 1.38;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { margin-bottom: 5px; color: #0a3151; font-size: 22pt; line-height: 1.08; letter-spacing: -0.35px; }
+    h2 { margin: 0 0 7px; color: #0a3151; font-size: 13.5pt; line-height: 1.15; }
+    h3 { margin-bottom: 3px; color: #0a3151; font-size: 10.2pt; }
+    p { margin-bottom: 7px; }
+    a { color: #075f8f; text-decoration: none; }
+    .eyebrow { margin-bottom: 6px; color: #527083; font-size: 7.4pt; font-weight: 700; letter-spacing: 1.25px; text-transform: uppercase; }
+    .subhead { margin-bottom: 14px; color: #52616d; font-size: 10.2pt; }
+    .verdict {
+      margin-bottom: 14px;
+      padding: 11px 13px;
+      border-left: 5px solid #cc8a1b;
+      background: #f7f1e4;
+    }
+    .verdict strong { color: #0a3151; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .card {
+      padding: 9px 10px 8px;
+      border: 1px solid #cfdae1;
+      border-radius: 5px;
+      background: #fff;
+      break-inside: avoid;
+    }
+    .card p { margin-bottom: 4px; }
+    .label { color: #647681; font-size: 7.4pt; font-weight: 700; letter-spacing: .45px; text-transform: uppercase; }
+    .best { color: #1c6a4a; font-weight: 700; }
+    .limit { color: #8a5421; font-weight: 700; }
+    .section { margin-top: 14px; break-inside: avoid; }
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      break-before: page;
+    }
+    ul { margin: 4px 0 0; padding-left: 17px; }
+    li { margin: 0 0 4px; }
+    .positioning {
+      padding: 10px 12px;
+      border: 1px solid #a9c5d7;
+      border-radius: 5px;
+      background: #edf5f9;
+      color: #16384b;
+      font-size: 10pt;
+      break-inside: avoid;
+    }
+    .recommendation {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border: 1px solid #d8c391;
+      border-radius: 5px;
+      background: #fbf7ec;
+      break-inside: avoid;
+    }
+    .sources { margin-top: 12px; padding-top: 8px; border-top: 1px solid #ccd6dc; }
+    .sources p { margin-bottom: 4px; font-size: 7.7pt; line-height: 1.3; }
+    .fine { color: #687782; font-size: 7.4pt; line-height: 1.32; }
+    footer { margin-top: 8px; color: #71808a; font-size: 7.2pt; }
+  </style>
+</head>
+<body>
+  <div class="eyebrow">SPX Collar Simulator · Competitive Review</div>
+  <h1>How This Simulator Compares with Public Alternatives</h1>
+  <p class="subhead">A candid review for educational and board-level use · Reviewed November 7, 2026</p>
+
+  <div class="verdict">
+    <strong>Bottom line.</strong> No single public tool clearly does the entire job better. Several alternatives are better for current option-chain pricing, Greeks and trade construction. This simulator is better suited to explaining how an index collar may affect a dollar portfolio—including contract rounding, hedge coverage, basis risk, path behavior and the opportunity cost of a strong market advance.
+  </div>
+
+  <h2>Strong Public Alternatives</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>OIC / iVolatility Calculator</h3>
+      <p><span class="best">Best for:</span> an authoritative options-education setting with delayed stock, ETF and index data, Greeks, profit/loss and probability analytics.</p>
+      <p><span class="limit">Limit versus this app:</span> focuses on option positions rather than translating a collar into a board-level portfolio story.</p>
+      <p><a href="https://www.optionseducation.org/options-quotes-calculators">optionseducation.org/options-quotes-calculators</a></p>
+    </div>
+    <div class="card">
+      <h3>OptionStrat</h3>
+      <p><span class="best">Best for:</span> fast visual construction, draggable strikes, implied-volatility adjustments and intuitive payoff displays.</p>
+      <p><span class="limit">Limit versus this app:</span> some market-data and analytics features are paid; it is trade-centric rather than portfolio-hedge-centric.</p>
+      <p><a href="https://optionstrat.com/features">optionstrat.com/features</a></p>
+    </div>
+    <div class="card">
+      <h3>Tradytics Options Payoff</h3>
+      <p><span class="best">Best for:</span> chain-driven trade analysis, profit/loss through time, Greeks, historical move context and shareable setups.</p>
+      <p><span class="limit">Limit versus this app:</span> stronger as an options workstation than as an explanation of real-world hedge coverage and portfolio basis risk.</p>
+      <p><a href="https://tradytics.com/builder">tradytics.com/builder</a></p>
+    </div>
+    <div class="card">
+      <h3>Options Profit Calculator</h3>
+      <p><span class="best">Best for:</span> a simple, dedicated collar payoff calculation with a familiar expiration and time-based profit/loss view.</p>
+      <p><span class="limit">Limit versus this app:</span> offers less portfolio context, scenario explanation and disclosure support.</p>
+      <p><a href="https://www.optionsprofitcalculator.com/calculator/collar.html">optionsprofitcalculator.com/calculator/collar.html</a></p>
+    </div>
+    <div class="card" style="grid-column: 1 / -1;">
+      <h3>Barchart Protective Collar</h3>
+      <p><span class="best">Best for:</span> screening delayed market opportunities and comparing collar candidates using maximum gain, maximum loss and probability measures. <span class="limit">Limit versus this app:</span> designed primarily to find trades, not to demonstrate a customized hedge against a broader portfolio.</p>
+      <p><a href="https://www.barchart.com/options/protection-strategies/protective-collar">barchart.com/options/protection-strategies/protective-collar</a></p>
+    </div>
+  </div>
+
+  <div class="section split">
+    <div>
+      <h2>Where Public Tools Are Better</h2>
+      <ul>
+        <li>Current or delayed option chains rather than manually entered quotes.</li>
+        <li>Bid, ask, midpoint, implied volatility, volume and open interest.</li>
+        <li>Position Greeks and more flexible multi-leg trade construction.</li>
+        <li>Faster comparison of many expirations and strike combinations.</li>
+      </ul>
+    </div>
+    <div>
+      <h2>Where This App Is Better</h2>
+      <ul>
+        <li>Starts with a dollar portfolio and converts it to whole SPX contracts.</li>
+        <li>Shows coverage, beta and tracking-error assumptions explicitly.</li>
+        <li>Separates exact index exposure from a proxy equity portfolio.</li>
+        <li>Makes strong-rally opportunity cost visible in dollars.</li>
+        <li>Includes historical scenarios and plain-language limitations.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Recommended Positioning</h2>
+    <div class="positioning">
+      “This is an educational portfolio-hedging simulator, not an execution platform or an options-price authority. We use it to understand the shape, scale and tradeoffs of a one-year SPX collar. Any actual hedge would require current executable quotes, portfolio-specific exposure analysis and review of liquidity, tax, accounting, collateral and implementation considerations.”
+    </div>
+  </div>
+
+  <div class="recommendation">
+    <h3>Highest-value next enhancement</h3>
+    <p>Add a paste-or-import workflow for a real SPX option chain and display each selected leg’s bid, ask, midpoint, implied volatility, volume, open interest, delta and vega. Preserve the current portfolio and disclosure layer. That would close the app’s largest gap without turning it into a full trading terminal.</p>
+  </div>
+
+  <div class="sources">
+    <p><strong>Public sources reviewed:</strong> Options Industry Council/iVolatility, OptionStrat, Tradytics, Options Profit Calculator and Barchart pages linked above. Product access, pricing, data delay and feature availability may change.</p>
+    <p class="fine"><strong>Important:</strong> This comparison is qualitative and is not an endorsement of any service. It is based on publicly described features and the intended educational purpose of this project. The simulator remains an illustration, not investment advice, a recommendation, a forecast or an executable hedge proposal.</p>
+  </div>
+  <footer>SPX Collar Simulator · Public Simulator Comparison</footer>
+</body>
+</html>

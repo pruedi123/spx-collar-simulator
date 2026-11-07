@@ -10,6 +10,10 @@ open index.html
 
 The app is a self-contained HTML file. It has no build step, package installation, server, or internet requirement. On Windows or Linux, open `index.html` directly in a modern browser after cloning.
 
+## Project documents
+
+- [Public simulator comparison (PDF)](docs/public-simulator-comparison.pdf) — a candid review of where public alternatives are stronger and where this project is better suited to portfolio-level education.
+
 ## What it does
 
 The simulator illustrates a one-year European-style SPX collar for either a closely tracking S&P 500 portfolio or a different equity portfolio with an estimated beta and tracking error:
